@@ -1,204 +1,24 @@
-# This example requires the 'members' and 'message_content' privileged intents to function.
-import traceback
-import typing
 import discord
 from discord.ext import commands
-import random
 
-description = '''An example bot to showcase the discord.ext.commands extension
-module.
+description='''Este es un programa donde viculamos a discord con studio code para lanzar imagenes'''
+intents=discord. Intents.default()
+intents.members=True
+intents.message_content=True
 
-There are a number of utility commands being showcased here.'''
-
-intents = discord.Intents.default()
-intents.members = True
-intents.message_content = True
-
-bot = commands.Bot(command_prefix='?', description=description, intents=intents)
-
+bot=commands.Bot(command_prefix='/', description=description, intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user} (ID: {bot.user.id})')
-    print('------')
+    print(f'logeado como {bot.user} (ID: {bot.user.id}) ')
 
-
-@bot.command()
-async def add(ctx, left: int, right: int):
-    """Adds two numbers together."""
-    await ctx.send(left + right)
-
-
-@bot.command()
-async def roll(ctx, dice: str):
-    """Rolls a dice in NdN format."""
-    try:
-        rolls, limit = map(int, dice.split('d'))
-    except Exception:
-        await ctx.send('Format has to be in NdN!')
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
         return
+    if message.content.lower() == "/sendcat":
+        with open('descarga.jpg', 'rb') as f:
+            picture = discord.File(f)
+            await message.channel.send(content='Aqui esta la imagen de tu gatito',file=picture)
 
-    result = ', '.join(str(random.randint(1, limit)) for r in range(rolls))
-    await ctx.send(result)
-
-
-@bot.command(description='For when you wanna settle the score some other way')
-async def choose(ctx, *choices: str):
-    """Chooses between multiple choices."""
-    await ctx.send(random.choice(choices))
-
-
-@bot.command()
-async def repeat(ctx, times: int, content='repeating...'):
-    """Repeats a message multiple times."""
-    for i in range(times):
-        await ctx.send(content)
-
-
-@bot.command()
-async def joined(ctx, member: discord.Member):
-    """Says when a member joined."""
-    await ctx.send(f'{member.name} joined {discord.utils.format_dt(member.joined_at)}')
-
-
-@bot.group()
-async def cool(ctx):
-    """Says if a user is cool.
-
-    In reality this just checks if a subcommand is being invoked.
-    """
-    if ctx.invoked_subcommand is None:
-        await ctx.send(f'No, {ctx.subcommand_passed} is not cool')
-
-
-@cool.command(name='bot')
-async def _bot(ctx):
-    """Is the bot cool?"""
-    await ctx.send('Yes, the bot is cool.')
-#------------------------------------------------------------------------------------
-@bot.command()
-async def userinfo(ctx: commands.Context, user: discord.User):
-    # In the command signature above, you can see that the `user`
-    # parameter is typehinted to `discord.User`. This means that
-    # during command invocation we will attempt to convert
-    # the value passed as `user` to a `discord.User` instance.
-    # The documentation notes what can be converted, in the case of `discord.User`
-    # you pass an ID, mention or username (discrim optional)
-    # E.g. 80088516616269824, @Danny or Danny#0007
-
-    # NOTE: typehinting acts as a converter within the `commands` framework only.
-    # In standard Python, it is use for documentation and IDE assistance purposes.
-
-    # If the conversion is successful, we will have a `discord.User` instance
-    # and can do the following:
-    user_id = user.id
-    username = user.name
-    avatar = user.display_avatar.url
-    await ctx.send(f'User found: {user_id} -- {username}\n{avatar}')
-
-
-@userinfo.error
-async def userinfo_error(ctx: commands.Context, error: commands.CommandError):
-    # If the conversion above fails for any reason, it will raise `commands.BadArgument`
-    # so we handle this in this error handler:
-    if isinstance(error, commands.BadArgument):
-        return await ctx.send('Couldn\'t find that user.')
-    # The default `on_command_error` will ignore errors from this command
-    # because we made our own command-specific error handler,
-    # so we need to log tracebacks ourselves.
-    else:
-        traceback.print_exception(type(error), error, error.__traceback__)
-
-
-# Custom Converter here
-class ChannelOrMemberConverter(commands.Converter):
-    async def convert(self, ctx: commands.Context, argument: str):
-        # In this example we have made a custom converter.
-        # This checks if an input is convertible to a
-        # `discord.Member` or `discord.TextChannel` instance from the
-        # input the user has given us using the pre-existing converters
-        # that the library provides.
-
-        member_converter = commands.MemberConverter()
-        try:
-            # Try and convert to a Member instance.
-            # If this fails, then an exception is raised.
-            # Otherwise, we just return the converted member value.
-            member = await member_converter.convert(ctx, argument)
-        except commands.MemberNotFound:
-            pass
-        else:
-            return member
-
-        # Do the same for TextChannel...
-        textchannel_converter = commands.TextChannelConverter()
-        try:
-            channel = await textchannel_converter.convert(ctx, argument)
-        except commands.ChannelNotFound:
-            pass
-        else:
-            return channel
-
-        # If the value could not be converted we can raise an error
-        # so our error handlers can deal with it in one place.
-        # The error has to be CommandError derived, so BadArgument works fine here.
-        raise commands.BadArgument(f'No Member or TextChannel could be converted from "{argument}"')
-
-
-@bot.command()
-async def notify(ctx: commands.Context, target: ChannelOrMemberConverter):
-    # This command signature utilises the custom converter written above
-    # What will happen during command invocation is that the `target` above will be passed to
-    # the `argument` parameter of the `ChannelOrMemberConverter.convert` method and
-    # the conversion will go through the process defined there.
-
-    await target.send(f'Hello, {target.name}!')
-
-
-@bot.command()
-async def ignore(ctx: commands.Context, target: typing.Union[discord.Member, discord.TextChannel]):
-    # This command signature utilises the `typing.Union` typehint.
-    # The `commands` framework attempts a conversion of each type in this Union *in order*.
-    # So, it will attempt to convert whatever is passed to `target` to a `discord.Member` instance.
-    # If that fails, it will attempt to convert it to a `discord.TextChannel` instance.
-    # See: https://discordpy.readthedocs.io/en/latest/ext/commands/commands.html#typing-union
-    # NOTE: If a Union typehint converter fails it will raise `commands.BadUnionArgument`
-    # instead of `commands.BadArgument`.
-
-    # To check the resulting type, `isinstance` is used
-    if isinstance(target, discord.Member):
-        await ctx.send(f'Member found: {target.mention}, adding them to the ignore list.')
-    elif isinstance(target, discord.TextChannel):  # this could be an `else` but for completeness' sake.
-        await ctx.send(f'Channel found: {target.mention}, adding it to the ignore list.')
-
-
-# Built-in type converters.
-@bot.command()
-async def multiply(ctx: commands.Context, number: int, maybe: bool):
-    # We want an `int` and a `bool` parameter here.
-    # `bool` is a slightly special case, as shown here:
-    # See: https://discordpy.readthedocs.io/en/latest/ext/commands/commands.html#bool
-
-    if maybe is True:
-        return await ctx.send(number * 2)
-    await ctx.send(number * 5)
-@bot.command()
-async def explain(ctx):
-    explanation = """
-    Aquí tienes una descripción de los comandos en este bot de Discord:
-
-    1. `add`: Este comando suma dos numeros, debes proporcionar dos números enteros, ejemplo: '?add 2 6'.
-    2. `roll`: Este comando simula el lanzamiento de dados, por ejemplo: '?roll 2d6' lanzaría dos dados de seis caras y te dara el resutado al azar que te aiga salido.
-    3. `choose`: Este comando elige al azar entre varias opciones proporcionadas, ejemplo: '?choose true false'.
-    4. `repeat`: Este comando repite un mensaje varias veces, debes porpocionar un numero entero y despues el texto que deseas multiplicar, por ejemplo: '?repeat 2 hi'.
-    5. `joined`: Este comando indica cuando se unió un miembro, debes agregar el nombre del usuario en el server ejemplo: '?joined usuario987'.
-    6. `cool`: Este comando dice si que el bot es cool, si no se pone bot y pone cualquier usuario dira que no es cool, ejemplo: '?cool bot' (Yes, the bot is cool.) '?cool usuario987' (No, usuario987 is not cool).
-    7. `userinfo`: Este comando proporciona información sobre un usuario y su foto de perfil, debes de decir un usuario del server, por ejemplo: '?userinfo usuario987'.
-    8. `notify`: Este comando da una notificacion de un usuario del server, se debe porpocionar el nombre, ejemplo: '?notify usuario987'.
-    9. `ignore`: Este comando pone al usuario porpocionado en una lista de ignorado, ejemplo: '?ignore usuario987'.
-    10. `multiply`: Este comando multiplica un número entero por 2 si el segundo argumento es `true`, o por 5 si es `false`, por ejemplo: '?multiply 9 true' (18). '?multiply 9 false' (45).
-    11. `explain`: Este comando te dira todos los comandos que tiene este bot, por ejemplo: '?explain'.
-    """
-    await ctx.send(explanation)
-
-bot.run('MTI0NDEzODQ2Njk0NjU4MDUxMA.GN8N5o.wIjL2KcQxhW6BwsuJXQ8vKgOiuC1ZUdkK_snxw')
+bot.run("token")
