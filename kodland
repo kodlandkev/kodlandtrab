@@ -1,24 +1,51 @@
 import discord
+import os
 from discord.ext import commands
+import random
 
-description='''Este es un programa donde viculamos a discord con studio code para lanzar imagenes'''
-intents=discord. Intents.default()
+description='''Este es un programa donde vinculamos a discord con studio code para lanzar imagenes'''
+intents=discord.Intents.default()
 intents.members=True
 intents.message_content=True
 
-bot=commands.Bot(command_prefix='/', description=description, intents=intents)
+bot=commands.Bot(command_prefix='$', description=description, intents=intents)
+img_name_pro = os.listdir('imagespro')
+img_name_ani = os.listdir('imagesani')
+img_name_gam = os.listdir('imagesgam')
 
 @bot.event
 async def on_ready():
     print(f'logeado como {bot.user} (ID: {bot.user.id}) ')
-
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
+    
+@bot.command()
+async def mempro(ctx):
+    if ctx.message.author == bot.user:
         return
-    if message.content.lower() == "/sendcat":
-        with open('descarga.jpg', 'rb') as f:
-            picture = discord.File(f)
-            await message.channel.send(content='Aqui esta la imagen de tu gatito',file=picture)
+    
+    img_to_send_pro = random.choice(img_name_pro)
+    with open(f'imagespro/{img_to_send_pro}', 'rb') as f:
+        picture = discord.File(f)
+        await ctx.send(file=picture)
+
+@bot.command()
+async def memani(ctx):
+    if ctx.message.author == bot.user:
+        return
+    
+    img_to_send_ani = random.choice(img_name_ani)
+    with open(f'imagesani/{img_to_send_ani}', 'rb') as f:
+        picture = discord.File(f)
+        await ctx.send(file=picture)
+
+@bot.command()
+async def memgam(ctx):
+    if ctx.message.author == bot.user:
+        return
+    
+    img_to_send_gam = random.choice(img_name_gam)
+    with open(f'imagesgam/{img_to_send_gam}', 'rb') as f:
+        picture = discord.File(f)
+        await ctx.send(file=picture)
 
 bot.run("token")
+
